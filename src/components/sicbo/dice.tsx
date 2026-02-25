@@ -1,38 +1,126 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import type { DiceValue } from "@/lib/types";
+import { motion } from "framer-motion";
 
 type DiceProps = {
-  value: DiceValue;
+  value: DiceValue | null; // Allow null for empty state
   className?: string;
 };
 
-const Dot = () => <div className="w-1/4 h-1/4 rounded-full bg-current" />;
+// A single dot on the dice face
+const Dot = ({ className }: { className?: string }) => (
+  <div className={cn("w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-current", className)} />
+);
 
-const DiceFace = ({ value }: { value: DiceValue }) => {
-  const baseClasses = "w-full h-full rounded-md p-2 flex items-center justify-center gap-1";
+const DiceFace = ({ value }: { value: DiceValue | null }) => {
+  // Common classes for all faces
+  const baseClasses = "w-full h-full rounded-lg p-1.5 flex";
+
   switch (value) {
     case 1:
-      return <div className={cn(baseClasses)}><Dot /></div>;
+      // Center dot
+      return (
+        <div className={cn(baseClasses, "items-center justify-center")}>
+          <Dot />
+        </div>
+      );
     case 2:
-      return <div className={cn(baseClasses, "justify-between")}><Dot className="self-start" /><Dot className="self-end" /></div>;
+      // Diagonal from top-left to bottom-right
+      return (
+        <div className={cn(baseClasses, "justify-between")}>
+          <Dot className="self-start" />
+          <Dot className="self-end" />
+        </div>
+      );
     case 3:
-      return <div className={cn(baseClasses, "justify-between")}><Dot className="self-start" /><Dot className="self-center" /><Dot className="self-end" /></div>;
+      // Diagonal from top-left to bottom-right
+      return (
+        <div className={cn(baseClasses, "justify-between")}>
+          <Dot className="self-start" />
+          <Dot className="self-center" />
+          <Dot className="self-end" />
+        </div>
+      );
     case 4:
-      return <div className={cn(baseClasses, "flex-wrap gap-y-1/2 justify-around")}><div className="w-full flex justify-between"><Dot /><Dot /></div><div className="w-full flex justify-between"><Dot /><Dot /></div></div>
+      // Two columns, two rows
+      return (
+        <div className={cn(baseClasses, "flex-col justify-between")}>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+        </div>
+      );
     case 5:
-      return <div className={cn(baseClasses, "flex-wrap justify-around")}><div className="w-full flex justify-between"><Dot /><Dot /></div><div className="w-full flex justify-center"><Dot /></div><div className="w-full flex justify-between"><Dot /><Dot /></div></div>
+      // A 'X' pattern
+      return (
+        <div className={cn(baseClasses, "flex-col justify-between")}>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+          <div className="flex justify-center">
+            <Dot />
+          </div>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+        </div>
+      );
     case 6:
-      return <div className={cn(baseClasses, "flex-wrap justify-around")}><div className="w-full flex justify-between"><Dot /><Dot /></div><div className="w-full flex justify-between"><Dot /><Dot /></div><div className="w-full flex justify-between"><Dot /><Dot /></div></div>
+      // Two columns of three dots
+      return (
+        <div className={cn(baseClasses, "flex-col justify-between")}>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+          <div className="flex justify-between">
+            <Dot />
+            <Dot />
+          </div>
+        </div>
+      );
     default:
-      return <div className={cn(baseClasses, "text-2xl font-bold")}>?</div>;
+      // Placeholder for null or undefined value
+      return (
+        <div
+          className={cn(
+            baseClasses,
+            "items-center justify-center text-4xl font-bold opacity-30 text-muted-foreground"
+          )}
+        >
+          ?
+        </div>
+      );
   }
 };
 
-
 export default function Dice({ value, className }: DiceProps) {
   return (
-    <div className={cn("bg-card text-card-foreground border rounded-lg p-1", className)}>
-        <DiceFace value={value} />
-    </div>
+    // Added aspect-square to ensure it's always a square
+    <motion.div
+      className={cn(
+        "bg-card text-card-foreground border-2 rounded-xl p-0.5 aspect-square",
+        className
+      )}
+      initial={{ rotateY: -90, opacity: 0, scale: 0.8 }}
+      animate={{ rotateY: 0, opacity: 1, scale: 1 }}
+      exit={{ rotateY: 90, opacity: 0, scale: 0.8 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+    >
+      <DiceFace value={value} />
+    </motion.div>
   );
 }

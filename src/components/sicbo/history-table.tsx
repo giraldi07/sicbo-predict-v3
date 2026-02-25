@@ -54,9 +54,9 @@ export default function HistoryTable({ history }: HistoryTableProps) {
                         <TableCell className="px-4 font-code text-muted-foreground">#{h.round}</TableCell>
                         <TableCell className="px-4">
                             <div className="flex justify-center items-center gap-1 font-bold font-code">
-                              <Dice value={h.d1} className="w-6 h-6" />
-                              <Dice value={h.d2} className="w-6 h-6" />
-                              <Dice value={h.d3} className="w-6 h-6" />
+                              <Dice value={h.d1} className="w-8 h-8" />
+                              <Dice value={h.d2} className="w-8 h-8" />
+                              <Dice value={h.d3} className="w-8 h-8" />
                             </div>
                         </TableCell>
                         <TableCell className="px-4 text-center font-bold font-code">{h.sum}</TableCell>
