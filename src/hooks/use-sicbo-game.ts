@@ -103,20 +103,13 @@ export function useSicboGame() {
         let newBets = { ...prevBets };
         let refund = 0;
 
+        // BIG and SMALL are mutually exclusive
         if (type === 'BIG' && newBets.SMALL > 0) {
             refund += newBets.SMALL;
             newBets.SMALL = 0;
         } else if (type === 'SMALL' && newBets.BIG > 0) {
             refund += newBets.BIG;
             newBets.BIG = 0;
-        }
-
-        if (type === 'ODD' && newBets.EVEN > 0) {
-            refund += newBets.EVEN;
-            newBets.EVEN = 0;
-        } else if (type === 'EVEN' && newBets.ODD > 0) {
-            refund += newBets.ODD;
-            newBets.ODD = 0;
         }
 
         newBets[type] += chipValue;
@@ -144,7 +137,7 @@ export function useSicboGame() {
     };
 
     const totalBetAmount = Object.values(bets).reduce((a,b) => a+b, 0);
-    let totalWinPayout = 0;
+    let totalPayout = 0;
     const profitDetail: Bets = { ...emptyProfitDetail };
 
     for (const betType in bets) {
@@ -153,9 +146,12 @@ export function useSicboGame() {
 
         if (betAmount > 0) {
             if (resultOutcomes[key]) {
-                const winAmount = betAmount * PAYOUTS[key];
-                totalWinPayout += winAmount;
-                profitDetail[key] = winAmount - betAmount;
+                // Per user's calculation, PAYOUTS are profit multipliers.
+                // Winning = stake back + (stake * profit multiplier)
+                const profit = betAmount * PAYOUTS[key];
+                const payout = betAmount + profit;
+                totalPayout += payout;
+                profitDetail[key] = profit;
             } else {
                 profitDetail[key] = -betAmount;
             }
@@ -164,7 +160,9 @@ export function useSicboGame() {
     
     const netProfit = Object.values(profitDetail).reduce((acc, val) => acc + val, 0);
     
-    setBankroll(prev => prev + totalWinPayout);
+    // The bankroll was already reduced when placing bets.
+    // Now we add the total payout (stake back + profit) for winning bets.
+    setBankroll(prev => prev + totalPayout);
 
     const newRecord: HistoryItem = {
       id: Date.now(),
