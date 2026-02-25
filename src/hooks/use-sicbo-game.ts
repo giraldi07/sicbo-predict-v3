@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { AppState, Bets, BetType, HistoryItem, Prediction, DiceValue } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 import { calculateSum, isBig, isSmall, isOdd, isEven, isLeopard, formatIDR } from '@/lib/utils';
@@ -22,17 +22,33 @@ export function useSicboGame() {
   const { toast } = useToast();
   
   const [appState, setAppState] = useState<AppState>('SETUP_BANKROLL');
-  const [bankroll, setBankroll] = useState(0);
+  
+  // Represents the bankroll at the *start* of the current betting round.
+  const [bankroll, setBankroll] = useState(0); 
   const [initialBankroll, setInitialBankroll] = useState(0);
+  
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [bets, setBets] = useState<Bets>(emptyBets);
+  
   const [selectedChip, setSelectedChip] = useState<number | 'CUSTOM'>(160);
   const [customChip, setCustomChip] = useState(1600);
+  
   const [prediction, setPrediction] = useState<Prediction>({ bigSmall: '-', oddEven: '-', leopardChance: 'Rendah', confidence: 0, explanation: 'Memuat prediksi...' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
 
+  // --- DERIVED STATE ---
+  const currentTotalBet = useMemo(() => Object.values(bets).reduce((a, b) => a + b, 0), [bets]);
+  
+  // This is the bankroll available for betting, shown to the user in the header.
+  const availableBankroll = useMemo(() => bankroll - currentTotalBet, [bankroll, currentTotalBet]);
+  
+  // This is the session profit, shown to the user in the header.
+  const sessionProfit = useMemo(() => availableBankroll - initialBankroll, [availableBankroll, initialBankroll]);
+
+
   const updatePrediction = useCallback(async (hist: HistoryItem[]) => {
+    setPrediction(prev => ({ ...prev, explanation: 'Menganalisa data baru...' }));
     const historyForAI = hist.map(({ round, d1, d2, d3, sum, isB, isS, isO, isE, isL }) => ({
       round, d1, d2, d3, sum, isB, isS, isO, isE, isL
     }));
@@ -50,10 +66,11 @@ export function useSicboGame() {
       }
     } catch (error) {
       console.error("AI Prediction failed:", error);
+      setPrediction(prev => ({ ...prev, explanation: 'Gagal mendapatkan prediksi AI.' }));
       toast({
         variant: "destructive",
         title: "AI Prediction Error",
-        description: "Could not fetch prediction from the AI.",
+        description: "Tidak dapat mengambil prediksi dari AI.",
       });
     }
   }, [toast]);
@@ -94,36 +111,26 @@ export function useSicboGame() {
   const handlePlaceBet = useCallback((type: BetType) => {
     const chipValue = selectedChip === 'CUSTOM' ? customChip : selectedChip;
     
-    if (bankroll < chipValue) {
+    if (chipValue > availableBankroll) {
       toast({ variant: 'destructive', title: "Bankroll tidak mencukupi", description: `Anda memerlukan setidaknya ${formatIDR(chipValue)} untuk bet ini.` });
       return;
     }
 
     setBets(prevBets => {
-        let newBets = { ...prevBets };
-        let refund = 0;
-
+        const newBets = { ...prevBets };
         // BIG and SMALL are mutually exclusive
-        if (type === 'BIG' && newBets.SMALL > 0) {
-            refund += newBets.SMALL;
-            newBets.SMALL = 0;
-        } else if (type === 'SMALL' && newBets.BIG > 0) {
-            refund += newBets.BIG;
-            newBets.BIG = 0;
-        }
-
+        if (type === 'BIG' && newBets.SMALL > 0) newBets.SMALL = 0;
+        else if (type === 'SMALL' && newBets.BIG > 0) newBets.BIG = 0;
+        
         newBets[type] += chipValue;
-        setBankroll(prevBankroll => prevBankroll + refund - chipValue);
         return newBets;
     });
 
-  }, [selectedChip, customChip, bankroll, toast]);
+  }, [selectedChip, customChip, availableBankroll, toast]);
 
   const clearBets = useCallback(() => {
-    const totalBets = Object.values(bets).reduce((a, b) => a + b, 0);
-    setBankroll(prev => prev + totalBets);
     setBets(emptyBets);
-  }, [bets]);
+  }, []);
 
   const handleResultSubmit = useCallback(async (d1: DiceValue, d2: DiceValue, d3: DiceValue) => {
     setIsSubmitting(true);
@@ -136,8 +143,9 @@ export function useSicboGame() {
       LEOPARD: isLeopard(d1, d2, d3),
     };
 
-    let totalPayout = 0;
+    let totalWinnings = 0;
     const profitDetail: Bets = { ...emptyProfitDetail };
+    const totalStake = currentTotalBet;
 
     for (const betType in bets) {
         const key = betType as BetType;
@@ -146,7 +154,7 @@ export function useSicboGame() {
         if (betAmount > 0) {
             if (resultOutcomes[key]) {
                 const payout = betAmount * PAYOUTS[key];
-                totalPayout += payout;
+                totalWinnings += payout;
                 profitDetail[key] = payout - betAmount;
             } else {
                 profitDetail[key] = -betAmount;
@@ -154,12 +162,12 @@ export function useSicboGame() {
         }
     }
     
-    const netProfit = Object.values(profitDetail).reduce((acc, val) => acc + val, 0);
+    const netProfit = totalWinnings - totalStake;
     
-    // The bankroll was already reduced when placing bets.
-    // Now we only add the total payout (stake back + profit) for winning bets.
-    // If all bets lose, totalPayout is 0, so nothing is added, which is correct.
-    setBankroll(prev => prev + totalPayout);
+    // The bankroll was already reduced virtually by currentTotalBet.
+    // We now commit the change by setting the new actual bankroll.
+    const newBankroll = bankroll + netProfit;
+    setBankroll(newBankroll);
 
     const newRecord: HistoryItem = {
       id: Date.now(),
@@ -180,22 +188,21 @@ export function useSicboGame() {
     setShowResultModal(false);
     setIsSubmitting(false);
 
-    if (netProfit > 0) {
-      toast({ title: "Menang!", description: `Profit bersih: ${formatIDR(netProfit)}`, className: "bg-primary text-primary-foreground border-primary" });
-    } else if (netProfit < 0) {
-      toast({ variant: "destructive", title: "Kalah", description: `Kerugian: ${formatIDR(Math.abs(netProfit))}` });
-    } else if (Object.values(bets).reduce((a,b) => a+b, 0) > 0) {
-      toast({ title: "Impas", description: "Tidak ada kemenangan atau kerugian." });
+    if (totalStake > 0) {
+      if (netProfit > 0) {
+        toast({ title: "Menang!", description: `Profit bersih: ${formatIDR(netProfit)}`, className: "bg-primary text-primary-foreground border-primary" });
+      } else if (netProfit < 0) {
+        toast({ variant: "destructive", title: "Kalah", description: `Kerugian: ${formatIDR(Math.abs(netProfit))}` });
+      } else {
+        toast({ title: "Impas", description: "Tidak ada kemenangan atau kerugian." });
+      }
     }
-  }, [bets, history, toast, updatePrediction]);
-
-  const currentTotalBet = useMemo(() => Object.values(bets).reduce((a, b) => a + b, 0), [bets]);
-  const sessionProfit = useMemo(() => bankroll - initialBankroll, [bankroll, initialBankroll]);
+  }, [bets, history, toast, updatePrediction, bankroll, currentTotalBet]);
 
   return {
     appState,
-    bankroll,
-    initialBankroll,
+    bankroll: availableBankroll,
+    sessionProfit,
     history,
     bets,
     selectedChip,
@@ -204,7 +211,6 @@ export function useSicboGame() {
     isSubmitting,
     showResultModal,
     currentTotalBet,
-    sessionProfit,
     handleBankrollSubmit,
     handlePrimerSubmit,
     handlePlaceBet,
