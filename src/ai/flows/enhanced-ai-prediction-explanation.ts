@@ -94,7 +94,7 @@ const enhancedAIPredictionExplanationFlow = ai.defineFlow(
     inputSchema: EnhancedAIPredictionInputSchema,
     outputSchema: EnhancedAIPredictionOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<EnhancedAIPredictionOutput> => {
     if (!input.history || input.history.length === 0) {
       // Provide a default prediction and explanation if no history is available
       return {
