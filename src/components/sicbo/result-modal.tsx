@@ -59,6 +59,7 @@ export default function ResultModal({ isOpen, onClose, onSubmit, isSubmitting }:
                           placeholder="-"
                           className="w-20 h-20 text-center text-3xl font-black font-code bg-background border-2 border-primary rounded-xl focus:ring-4 focus:ring-ring transition-all"
                           {...field}
+                          value={field.value ?? ''}
                         />
                       </FormControl>
                     </FormItem>

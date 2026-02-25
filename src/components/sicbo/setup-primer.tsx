@@ -83,6 +83,7 @@ export default function SetupPrimer({ onPrimerSubmit }: SetupPrimerProps) {
                                 className="w-16 h-16 text-center text-2xl font-black font-code bg-card border-2 border-input focus:border-primary focus:ring-2 focus:ring-ring transition-all"
                                 placeholder="-"
                                 {...field}
+                                value={field.value ?? ''}
                               />
                             </FormControl>
                           </FormItem>

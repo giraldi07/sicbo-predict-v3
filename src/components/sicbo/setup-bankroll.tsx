@@ -20,9 +20,6 @@ type SetupBankrollProps = {
 export default function SetupBankroll({ onBankrollSubmit }: SetupBankrollProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      bankroll: undefined,
-    },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -56,6 +53,7 @@ export default function SetupBankroll({ onBankrollSubmit }: SetupBankrollProps) 
                         placeholder="Contoh: 500000"
                         className="h-12 text-base font-code"
                         {...field}
+                        value={field.value ?? ''}
                       />
                     </FormControl>
                     <FormMessage />
