@@ -4,6 +4,7 @@ import { useSicboGame } from '@/hooks/use-sicbo-game';
 import SetupBankroll from '@/components/sicbo/setup-bankroll';
 import SetupPrimer from '@/components/sicbo/setup-primer';
 import PlayingView from '@/components/sicbo/playing-view';
+import { AnimatePresence } from 'framer-motion';
 
 export default function SicBoProPage() {
   const game = useSicboGame();
@@ -11,20 +12,19 @@ export default function SicBoProPage() {
   const renderContent = () => {
     switch (game.appState) {
       case 'SETUP_BANKROLL':
-        return <SetupBankroll onBankrollSubmit={game.handleBankrollSubmit} />;
+        return <SetupBankroll key="setup-bankroll" onBankrollSubmit={game.handleBankrollSubmit} />;
       case 'SETUP_PRIMER':
-        return <SetupPrimer onPrimerSubmit={game.handlePrimerSubmit} />;
+        return <SetupPrimer key="setup-primer" onPrimerSubmit={game.handlePrimerSubmit} />;
       case 'PLAYING':
-        return <PlayingView {...game} />;
+        return <PlayingView key="playing" {...game} />;
       default:
-        // Fallback to the initial setup state
-        return <SetupBankroll onBankrollSubmit={game.handleBankrollSubmit} />;
+        return <SetupBankroll key="fallback-bankroll" onBankrollSubmit={game.handleBankrollSubmit} />;
     }
   };
 
   return (
-    <>
+    <AnimatePresence mode="wait">
       {renderContent()}
-    </>
+    </AnimatePresence>
   );
 }

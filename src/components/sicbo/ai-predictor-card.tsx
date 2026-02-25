@@ -13,8 +13,8 @@ export default function AiPredictorCard({ prediction, round }: AiPredictorCardPr
   const confidenceColor = prediction.confidence > 75 ? "bg-green-500" : prediction.confidence > 50 ? "bg-yellow-500" : "bg-red-500";
   
   return (
-    <Card className="bg-card border-primary/20 overflow-hidden shadow-lg shadow-primary/10 relative">
-       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-blue-600"></div>
+    <Card className="bg-card/80 backdrop-blur-sm border-primary/20 overflow-hidden shadow-lg shadow-primary/10 relative">
+       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-primary/70 to-blue-600/50"></div>
       <CardHeader>
         <div className="flex items-center justify-between mb-2">
             <CardTitle className="font-headline text-lg flex items-center gap-2 text-primary">
@@ -66,7 +66,7 @@ export default function AiPredictorCard({ prediction, round }: AiPredictorCardPr
                 <Lightbulb className="w-4 h-4 mr-2"/>
                 Lihat Alasan Prediksi AI
             </AccordionTrigger>
-            <AccordionContent className="pt-4 text-sm text-muted-foreground">
+            <AccordionContent className="pt-4 text-sm text-muted-foreground bg-background/50 p-4 rounded-b-md border border-t-0">
               {prediction.explanation}
             </AccordionContent>
           </AccordionItem>

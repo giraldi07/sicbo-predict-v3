@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calculator, Play } from "lucide-react";
+import { motion } from "framer-motion";
 
 const formSchema = z.object({
   bankroll: z.coerce.number().min(1000, "Bankroll awal minimal Rp 1.000"),
@@ -20,6 +21,9 @@ type SetupBankrollProps = {
 export default function SetupBankroll({ onBankrollSubmit }: SetupBankrollProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      bankroll: undefined,
+    },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -27,12 +31,23 @@ export default function SetupBankroll({ onBankrollSubmit }: SetupBankrollProps) 
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-gray-700 bg-card shadow-2xl shadow-primary/10">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+    >
+      <Card className="w-full max-w-md border-border bg-card shadow-2xl shadow-primary/10">
         <CardHeader className="items-center text-center">
-          <div className="bg-primary p-4 rounded-full shadow-lg mb-4">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1, rotate: 360 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
+            className="bg-primary p-4 rounded-full shadow-lg mb-4"
+          >
             <Calculator className="w-10 h-10 text-primary-foreground" />
-          </div>
+          </motion.div>
           <CardTitle className="font-headline text-3xl text-primary">SicBo Pro</CardTitle>
           <CardDescription className="text-muted-foreground">
             Masukkan bankroll (saldo) awal Anda untuk memulai permainan dan melacak profit.
@@ -62,12 +77,12 @@ export default function SetupBankroll({ onBankrollSubmit }: SetupBankrollProps) 
               />
               <Button type="submit" className="w-full h-12 text-lg font-bold" size="lg">
                 Mulai Sesi
-                <Play className="w-5 h-5" />
+                <Play className="w-5 h-5 ml-2" />
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

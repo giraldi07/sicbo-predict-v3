@@ -1,5 +1,6 @@
 import { Dices } from "lucide-react";
 import { formatIDR } from "@/lib/utils";
+import { ThemeToggleButton } from "../ui/theme-toggle-button";
 
 type HeaderProps = {
   bankroll: number;
@@ -25,6 +26,7 @@ export default function Header({ bankroll, sessionProfit }: HeaderProps) {
               {sessionProfit > 0 ? '+' : ''}{formatIDR(sessionProfit)}
             </div>
           </div>
+          <ThemeToggleButton />
         </div>
       </div>
     </header>
