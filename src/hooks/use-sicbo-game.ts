@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { AppState, Bets, BetType, HistoryItem, Prediction, DiceValue } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 import { calculateSum, isBig, isSmall, isOdd, isEven, isLeopard, formatIDR } from '@/lib/utils';
@@ -23,14 +23,14 @@ export function useSicboGame() {
   
   const [appState, setAppState] = useState<AppState>('SETUP_BANKROLL');
   
-  // Represents the bankroll at the *start* of the current betting round.
+  // This bankroll state represents the TRUE bankroll at the start of any given round.
   const [bankroll, setBankroll] = useState(0); 
   const [initialBankroll, setInitialBankroll] = useState(0);
   
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [bets, setBets] = useState<Bets>(emptyBets);
   
-  const [selectedChip, setSelectedChip] = useState<number | 'CUSTOM'>(160);
+  const [selectedChip, setSelectedChip] = useState<number | 'CUSTOM'>(1600);
   const [customChip, setCustomChip] = useState(1600);
   
   const [prediction, setPrediction] = useState<Prediction>({ bigSmall: '-', oddEven: '-', leopardChance: 'Rendah', confidence: 0, explanation: 'Memuat prediksi...' });
@@ -41,9 +41,11 @@ export function useSicboGame() {
   const currentTotalBet = useMemo(() => Object.values(bets).reduce((a, b) => a + b, 0), [bets]);
   
   // This is the bankroll available for betting, shown to the user in the header.
+  // It's the bankroll at the start of the round, minus the current bets on the table.
   const availableBankroll = useMemo(() => bankroll - currentTotalBet, [bankroll, currentTotalBet]);
   
   // This is the session profit, shown to the user in the header.
+  // It's the current available bankroll minus the initial starting bankroll.
   const sessionProfit = useMemo(() => availableBankroll - initialBankroll, [availableBankroll, initialBankroll]);
 
 
@@ -111,6 +113,8 @@ export function useSicboGame() {
   const handlePlaceBet = useCallback((type: BetType) => {
     const chipValue = selectedChip === 'CUSTOM' ? customChip : selectedChip;
     
+    if (chipValue <= 0) return;
+
     if (chipValue > availableBankroll) {
       toast({ variant: 'destructive', title: "Bankroll tidak mencukupi", description: `Anda memerlukan setidaknya ${formatIDR(chipValue)} untuk bet ini.` });
       return;
@@ -119,8 +123,8 @@ export function useSicboGame() {
     setBets(prevBets => {
         const newBets = { ...prevBets };
         // BIG and SMALL are mutually exclusive
-        if (type === 'BIG' && newBets.SMALL > 0) newBets.SMALL = 0;
-        else if (type === 'SMALL' && newBets.BIG > 0) newBets.BIG = 0;
+        if (type === 'BIG') newBets.SMALL = 0;
+        else if (type === 'SMALL') newBets.BIG = 0;
         
         newBets[type] += chipValue;
         return newBets;
@@ -134,6 +138,10 @@ export function useSicboGame() {
 
   const handleResultSubmit = useCallback(async (d1: DiceValue, d2: DiceValue, d3: DiceValue) => {
     setIsSubmitting(true);
+    
+    // This is the bankroll at the start of the round, before bets were placed.
+    const bankrollAtRoundStart = bankroll;
+    
     const sum = calculateSum(d1, d2, d3);
     const resultOutcomes = {
       BIG: isBig(sum),
@@ -143,9 +151,8 @@ export function useSicboGame() {
       LEOPARD: isLeopard(d1, d2, d3),
     };
 
-    let totalWinnings = 0;
     const profitDetail: Bets = { ...emptyProfitDetail };
-    const totalStake = currentTotalBet;
+    let totalNetProfit = 0;
 
     for (const betType in bets) {
         const key = betType as BetType;
@@ -153,20 +160,19 @@ export function useSicboGame() {
 
         if (betAmount > 0) {
             if (resultOutcomes[key]) {
-                const payout = betAmount * PAYOUTS[key];
-                totalWinnings += payout;
-                profitDetail[key] = payout - betAmount;
+                // CORRECT LOGIC: Profit is the bet amount times the payout multiplier.
+                const profit = betAmount * PAYOUTS[key];
+                profitDetail[key] = profit;
+                totalNetProfit += profit;
             } else {
+                // Loss is the bet amount itself.
                 profitDetail[key] = -betAmount;
+                totalNetProfit -= betAmount;
             }
         }
     }
     
-    const netProfit = totalWinnings - totalStake;
-    
-    // The bankroll was already reduced virtually by currentTotalBet.
-    // We now commit the change by setting the new actual bankroll.
-    const newBankroll = bankroll + netProfit;
+    const newBankroll = bankrollAtRoundStart + totalNetProfit;
     setBankroll(newBankroll);
 
     const newRecord: HistoryItem = {
@@ -175,24 +181,27 @@ export function useSicboGame() {
       d1, d2, d3, sum,
       isB: resultOutcomes.BIG, isS: resultOutcomes.SMALL, isO: resultOutcomes.ODD, isE: resultOutcomes.EVEN, isL: resultOutcomes.LEOPARD,
       bets: { ...bets },
-      profit: netProfit,
+      profit: totalNetProfit,
       profitDetail: profitDetail
     };
 
     const newHistory = [...history, newRecord];
     setHistory(newHistory);
     
+    // Fetch new prediction based on the latest result
     await updatePrediction(newHistory);
 
+    // Clean up for next round
     setBets(emptyBets);
     setShowResultModal(false);
     setIsSubmitting(false);
 
-    if (totalStake > 0) {
-      if (netProfit > 0) {
-        toast({ title: "Menang!", description: `Profit bersih: ${formatIDR(netProfit)}`, className: "bg-primary text-primary-foreground border-primary" });
-      } else if (netProfit < 0) {
-        toast({ variant: "destructive", title: "Kalah", description: `Kerugian: ${formatIDR(Math.abs(netProfit))}` });
+    // Toast notification for the result
+    if (currentTotalBet > 0) {
+      if (totalNetProfit > 0) {
+        toast({ title: "Menang!", description: `Profit bersih: ${formatIDR(totalNetProfit)}`, className: "bg-primary text-primary-foreground border-primary" });
+      } else if (totalNetProfit < 0) {
+        toast({ variant: "destructive", title: "Kalah", description: `Kerugian: ${formatIDR(Math.abs(totalNetProfit))}` });
       } else {
         toast({ title: "Impas", description: "Tidak ada kemenangan atau kerugian." });
       }
