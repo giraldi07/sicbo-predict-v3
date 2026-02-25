@@ -145,10 +145,9 @@ export function useSicboGame() {
 
         if (betAmount > 0) {
             if (resultOutcomes[key]) {
-                const profit = betAmount * PAYOUTS[key];
-                const payout = betAmount + profit;
+                const payout = betAmount * PAYOUTS[key];
                 totalPayout += payout;
-                profitDetail[key] = profit;
+                profitDetail[key] = payout - betAmount;
             } else {
                 profitDetail[key] = -betAmount;
             }
@@ -159,6 +158,7 @@ export function useSicboGame() {
     
     // The bankroll was already reduced when placing bets.
     // Now we only add the total payout (stake back + profit) for winning bets.
+    // If all bets lose, totalPayout is 0, so nothing is added, which is correct.
     setBankroll(prev => prev + totalPayout);
 
     const newRecord: HistoryItem = {
