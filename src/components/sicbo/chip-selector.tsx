@@ -11,7 +11,7 @@ type ChipSelectorProps = {
   setCustomChip: (value: number) => void;
 };
 
-const CHIP_VALUES = [1000, 5000, 10000, 50000, 100000];
+const CHIP_VALUES = [160, 1600, 16000];
 
 export default function ChipSelector({ selectedChip, customChip, setSelectedChip, setCustomChip }: ChipSelectorProps) {
   return (
@@ -37,6 +37,7 @@ export default function ChipSelector({ selectedChip, customChip, setSelectedChip
             </Button>
           ))}
           <Button
+            key="custom"
             variant="outline"
             onClick={() => setSelectedChip('CUSTOM')}
             className={cn(

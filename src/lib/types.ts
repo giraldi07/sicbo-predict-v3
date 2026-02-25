@@ -14,6 +14,7 @@ export type HistoryItem = {
   isL: boolean;
   bets: Bets;
   profit: number;
+  profitDetail: Bets;
 };
 
 export type Bets = {
