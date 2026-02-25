@@ -27,7 +27,7 @@ export function useSicboGame() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [bets, setBets] = useState<Bets>(emptyBets);
   const [selectedChip, setSelectedChip] = useState<number | 'CUSTOM'>(160);
-  const [customChip, setCustomChip] = useState(160);
+  const [customChip, setCustomChip] = useState(1600);
   const [prediction, setPrediction] = useState<Prediction>({ bigSmall: '-', oddEven: '-', leopardChance: 'Rendah', confidence: 0, explanation: 'Memuat prediksi...' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
@@ -136,7 +136,6 @@ export function useSicboGame() {
       LEOPARD: isLeopard(d1, d2, d3),
     };
 
-    const totalBetAmount = Object.values(bets).reduce((a,b) => a+b, 0);
     let totalPayout = 0;
     const profitDetail: Bets = { ...emptyProfitDetail };
 
@@ -146,8 +145,6 @@ export function useSicboGame() {
 
         if (betAmount > 0) {
             if (resultOutcomes[key]) {
-                // Per user's calculation, PAYOUTS are profit multipliers.
-                // Winning = stake back + (stake * profit multiplier)
                 const profit = betAmount * PAYOUTS[key];
                 const payout = betAmount + profit;
                 totalPayout += payout;
@@ -161,7 +158,7 @@ export function useSicboGame() {
     const netProfit = Object.values(profitDetail).reduce((acc, val) => acc + val, 0);
     
     // The bankroll was already reduced when placing bets.
-    // Now we add the total payout (stake back + profit) for winning bets.
+    // Now we only add the total payout (stake back + profit) for winning bets.
     setBankroll(prev => prev + totalPayout);
 
     const newRecord: HistoryItem = {
@@ -187,7 +184,7 @@ export function useSicboGame() {
       toast({ title: "Menang!", description: `Profit bersih: ${formatIDR(netProfit)}`, className: "bg-primary text-primary-foreground border-primary" });
     } else if (netProfit < 0) {
       toast({ variant: "destructive", title: "Kalah", description: `Kerugian: ${formatIDR(Math.abs(netProfit))}` });
-    } else if (totalBetAmount > 0) {
+    } else if (Object.values(bets).reduce((a,b) => a+b, 0) > 0) {
       toast({ title: "Impas", description: "Tidak ada kemenangan atau kerugian." });
     }
   }, [bets, history, toast, updatePrediction]);
